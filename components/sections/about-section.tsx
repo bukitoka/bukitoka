@@ -11,17 +11,23 @@ export function AboutSection() {
       <SectionLabel number="02">What stayed the same</SectionLabel>
       <div className="grid gap-9 md:gap-12 lg:grid-cols-[0.8fr_1.2fr]">
         <Reveal className="grid grid-cols-[7rem_1fr] items-center gap-5 sm:block">
-          <Parallax className="relative max-w-xs sm:max-w-md" distance={30}>
-            <Image
-              src="/portrait.jpeg"
-              alt="I Ketut Kusumajaya, full-stack engineer based in Bali"
-              width={362}
-              height={429}
-              sizes="(max-width: 639px) 112px, (max-width: 1023px) 448px, 40vw"
-              className="aspect-square w-full object-cover sm:grayscale transition-[filter] duration-700 sm:hover:grayscale-0"
-            />
-            <div className="absolute -bottom-2 right-1 grid size-10 place-items-center rounded-full border-4 border-background bg-brand-300 font-heading text-2xl text-brand-900 sm:-bottom-5 sm:-right-3 sm:size-24 sm:border-8 sm:text-4xl md:-right-5">
-              k.
+          <Parallax className="max-w-xs sm:max-w-md" distance={30}>
+            <div className="relative">
+              <Image
+                src="/portrait.jpeg"
+                alt="I Ketut Kusumajaya, full-stack engineer based in Bali"
+                width={362}
+                height={429}
+                sizes="(max-width: 639px) 112px, (max-width: 1023px) 448px, 40vw"
+                className="aspect-square w-full object-cover sm:grayscale transition-[filter] duration-700 sm:hover:grayscale-0"
+              />
+              <div
+                aria-hidden="true"
+                data-profile-badge
+                className="absolute -bottom-2 -right-2 grid size-10 place-items-center rounded-full border-4 border-background bg-brand-300 font-heading text-2xl text-brand-900 sm:-bottom-5 sm:-right-3 sm:size-24 sm:border-8 sm:text-4xl md:-right-5"
+              >
+                k.
+              </div>
             </div>
           </Parallax>
           <p className="max-w-xs text-sm leading-relaxed text-muted-foreground sm:mt-6">

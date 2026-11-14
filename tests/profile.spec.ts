@@ -86,6 +86,21 @@ test("layouts fit narrow phones through desktop with reduced motion", async ({
           .map((heading) => heading.textContent),
       )
     expect(clippedHeadings, `clipped headings at ${width}px`).toEqual([])
+
+    const corner = await page
+      .locator("[data-profile-badge]")
+      .evaluate((badge) => {
+        const photo = badge.parentElement?.querySelector("img")
+        if (!photo) throw new Error("Profile photo is missing")
+        const image = photo.getBoundingClientRect()
+        const circle = badge.getBoundingClientRect()
+        return {
+          right: circle.right - image.right,
+          bottom: circle.bottom - image.bottom,
+        }
+      })
+    expect(corner.right).toBeCloseTo(width < 640 ? 8 : width < 768 ? 12 : 20, 0)
+    expect(corner.bottom).toBeCloseTo(width < 640 ? 8 : 20, 0)
   }
 
   const experience = page
@@ -556,4 +571,49 @@ test("viewing the light resume preserves the portfolio theme and the download wo
   expect(await download.failure()).toBeNull()
   await page.getByRole("link", { name: "Back to profile", exact: true }).click()
   await expect(page.locator("html")).toHaveClass(/dark/)
+})
+
+test("experience timeline follows scrolling, replays, and respects reduced motion", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 800 })
+  await page.emulateMedia({ reducedMotion: "no-preference" })
+  await page.goto("/")
+  const entries = page.locator("[data-experience-entry]")
+  const progress = page.locator("[data-experience-progress]").first()
+  const scale = () =>
+    progress.evaluate(
+      (element) => new DOMMatrix(getComputedStyle(element).transform).m22,
+    )
+
+  await expect(entries).toHaveCount(5)
+  await expect(entries.first()).toContainText("ITB STIKOM Bali")
+  await expect(entries.nth(1)).toContainText("MKM Honda")
+  await expect(page.locator("#experience details").first()).not.toContainText(
+    "Laravel",
+  )
+  await expect.poll(scale).toBeLessThan(0.01)
+  await entries
+    .first()
+    .evaluate((element) =>
+      element.scrollIntoView({ block: "center", behavior: "instant" }),
+    )
+  await expect.poll(scale).toBeGreaterThan(0.2)
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }))
+  await expect.poll(scale).toBeLessThan(0.01)
+  await entries
+    .first()
+    .evaluate((element) =>
+      element.scrollIntoView({ block: "center", behavior: "instant" }),
+    )
+  await expect.poll(scale).toBeGreaterThan(0.2)
+
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  for (const line of await page.locator("[data-experience-progress]").all()) {
+    await expect(line).toHaveCSS("transform", "none")
+  }
+  for (const entry of await entries.all()) {
+    await expect(entry).toHaveCSS("transform", "none")
+    await expect(entry).toHaveCSS("opacity", "1")
+  }
 })

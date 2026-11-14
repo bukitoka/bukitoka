@@ -26,18 +26,27 @@ export const resume = {
     {
       label: "Frontend",
       value:
-        "React, Next.js, Tailwind CSS, TanStack Query, Vite with custom SSR",
+        "React, Next.js, TanStack Start, Tailwind CSS, TanStack Query, WordPress, Shopify, Vite with custom SSR",
     },
-    { label: "Backend", value: "FastAPI, Django, Laravel, Express.js, Gin" },
-    { label: "Data", value: "PostgreSQL, MySQL, MongoDB, Redis" },
+    { label: "Animation", value: "Motion, GSAP" },
+    {
+      label: "Backend",
+      value:
+        "FastAPI, Django, Flask, Laravel, Gin (Gin Gonic), NestJS, Express.js, Fastify, Hono, Strapi, Payload CMS",
+    },
+    {
+      label: "Data",
+      value: "PostgreSQL, MySQL, MongoDB, Redis, RabbitMQ, Meilisearch",
+    },
     {
       label: "Cloud & delivery",
-      value: "AWS, GCP, Docker, GitHub Actions, unit and end-to-end testing",
+      value:
+        "AWS, GCP, Firebase, Docker, GitHub, GitLab, GitHub Actions, Sentry, unit and end-to-end testing",
     },
     {
       label: "Integrations",
       value:
-        "Stripe, Midtrans, Xendit, third-party APIs, AI APIs, n8n, webhooks",
+        "Stripe, Midtrans, Xendit, Google Maps, Odoo, third-party APIs, AI APIs, n8n, webhooks",
     },
   ],
   education: {

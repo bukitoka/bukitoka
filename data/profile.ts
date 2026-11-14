@@ -73,9 +73,9 @@ export const experience = [
     role: "Full Stack Developer",
     date: "SEP 2021 — DEC 2023",
     description:
-      "Delivered Laravel CRM systems for MKM Honda and BPR Kancana, connecting customer operations, loan workflows, and management reports.",
+      "Delivered CRM systems for MKM Honda and BPR Kancana, connecting customer operations, loan workflows, and management reports.",
     highlights: [
-      "Built PHP and Laravel CRM systems for MKM Honda and BPR Kancana, moving customer operations online and speeding up loan approvals.",
+      "Built CRM systems for MKM Honda and BPR Kancana, moving customer operations online and speeding up loan approvals.",
       "Connected third-party APIs and internal ERP services, and built reports for sales, customer activity, and loan progress.",
       "Trained staff and supported the systems after launch, resolving production issues and helping teams move away from paper processes.",
     ],
@@ -85,14 +85,21 @@ export const experience = [
 export const skills = [
   {
     title: "What people use",
-    items: "TypeScript · React · Next.js · Tailwind CSS · TanStack Query",
+    items:
+      "TypeScript · React · Next.js · TanStack Start · Tailwind CSS · TanStack Query · WordPress · Shopify · Motion · GSAP",
   },
   {
     title: "What keeps it running",
-    items: "Python · Go · PHP · FastAPI · Django · Laravel · PostgreSQL",
+    items:
+      "Python · Go · PHP · FastAPI · Django · Flask · Laravel · Gin · NestJS · Express.js · Fastify · Hono · Strapi · Payload CMS",
+  },
+  {
+    title: "Where data lives",
+    items: "PostgreSQL · MySQL · MongoDB · Redis · RabbitMQ · Meilisearch",
   },
   {
     title: "What joins it together",
-    items: "Docker · AWS · GCP · GitHub Actions · Stripe · n8n · AI APIs",
+    items:
+      "Docker · AWS · GCP · Firebase · GitHub · GitLab · GitHub Actions · Sentry · Stripe · Midtrans · Xendit · Google Maps · Odoo · n8n · AI APIs",
   },
 ]
