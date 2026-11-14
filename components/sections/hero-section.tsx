@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowUpRight, FileText } from "lucide-react"
-import { ShapePlayground } from "@/components/detour/shape-playground"
+import { Arcade } from "@/components/detour/arcade"
 import { RotatingRole } from "@/components/rotating-role"
 import { HeroTitle, Parallax } from "@/components/scroll-effects"
 import { Button } from "@/components/ui/button"
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 export function HeroSection() {
   return (
     <section className="pb-6 pt-7 sm:pb-10 sm:pt-12 md:pb-16 md:pt-20">
-      <div className="grid items-center gap-6 sm:gap-8 sm:grid-cols-[1.2fr_0.8fr] lg:grid-cols-[1.3fr_0.8fr]">
+      <div className="grid items-center gap-6 sm:gap-8 lg:grid-cols-[1.3fr_0.8fr]">
         <div>
           <RotatingRole />
           <HeroTitle />
@@ -43,12 +43,12 @@ export function HeroSection() {
           </div>
         </div>
         <Parallax
-          className="ml-auto w-full max-w-sm sm:max-w-none lg:pb-2"
+          className="mx-auto w-full max-w-lg lg:ml-auto lg:mr-0 lg:max-w-none lg:pb-2"
           distance={65}
         >
-          <ShapePlayground />
+          <Arcade />
           <p className="mt-3 hidden text-xs leading-relaxed text-muted-foreground sm:block">
-            Rearrange the shapes. Or see how long you can keep a snake alive.
+            A platform adventure, a little Nokia nostalgia, or a quick flight.
           </p>
         </Parallax>
       </div>

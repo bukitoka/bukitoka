@@ -1,25 +1,9 @@
 import type { Metadata } from "next"
-import localFont from "next/font/local"
+import { display, fixel } from "@/app/fonts"
 import { Providers } from "@/components/theme-picker"
 import "@fontsource/jetbrains-mono/400.css"
 import "@fontsource/jetbrains-mono/500.css"
 import "./globals.css"
-
-const fixel = localFont({
-  src: [
-    { path: "./fonts/FixelText-Regular.woff2", weight: "400" },
-    { path: "./fonts/FixelText-Medium.woff2", weight: "500" },
-    { path: "./fonts/FixelText-SemiBold.woff2", weight: "600" },
-  ],
-  variable: "--font-fixel",
-  display: "swap",
-})
-
-const display = localFont({
-  src: "./fonts/FixelDisplay-Medium.woff2",
-  variable: "--font-display",
-  display: "swap",
-})
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.SITE_URL ?? "http://localhost:3000"),

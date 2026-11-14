@@ -111,3 +111,9 @@
     --ring: var(--color-brand-600);
   }
 }
+
+@media (width < 64rem) {
+  body:has([data-arcade-visible="true"]) [data-whatsapp-link] {
+    visibility: hidden;
+  }
+}

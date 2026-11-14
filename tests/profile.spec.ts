@@ -181,45 +181,66 @@ test("mobile navigation and touch controls are usable without parallax", async (
   await context.close()
 })
 
-test("visitors can compose, remix, and pause the artwork on mobile", async ({
+test("arcade supports platform movement, jumping, and switching games on mobile", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 })
-  await page.emulateMedia({ reducedMotion: "no-preference" })
+  await page.emulateMedia({ reducedMotion: "reduce" })
   await page.goto("/")
-  const playground = page.locator("[data-composition]")
   await page
     .getByRole("button", { name: "Take a small detour", exact: true })
     .click()
-  await page.getByRole("button", { name: "Balance", exact: true }).focus()
-  await page.keyboard.press("Enter")
-  await expect(playground).toHaveAttribute("data-composition", "Balance")
-  await expect(
-    page.getByRole("button", { name: "Balance", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true")
-  await page.getByRole("button", { name: "Remix", exact: true }).click()
-  await expect(playground.getByRole("status")).toContainText("variation 2")
-  await expect(playground.getByRole("img")).toHaveAccessibleName(
-    "Balance geometric composition, variation 2",
-  )
-  await expect(
-    page.getByRole("button", { name: "Pause motion", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true")
-  await page.getByRole("button", { name: "Pause motion", exact: true }).click()
-  await page.getByRole("button", { name: "Signal", exact: true }).click()
-  await expect(playground.getByRole("status")).toContainText(
-    "Signal · variation 1",
-  )
+  await expect(page.locator("[data-whatsapp-link]")).not.toBeVisible()
+  const platform = page.getByRole("application", {
+    name: "Super Kusuma platform game",
+    includeHidden: true,
+  })
+  await expect(platform).toHaveAttribute("data-platform-status", "ready")
+  await page
+    .getByRole("button", { name: "Start adventure", exact: true })
+    .click()
+  await expect(platform).toHaveAttribute("data-platform-status", "running")
+  const hero = page.locator("[data-platform-player]")
+  const before = await hero.getAttribute("transform")
+  await page.keyboard.down("ArrowRight")
+  await expect.poll(() => hero.getAttribute("transform")).not.toBe(before)
+  await page.keyboard.up("ArrowRight")
+  await page.keyboard.press("Space")
+  await expect
+    .poll(async () => {
+      const transform = await hero.getAttribute("transform")
+      return Number(transform?.match(/translate\([^ ]+ ([^)]+)\)/)?.[1] ?? 216)
+    })
+    .toBeLessThan(210)
+  await page.keyboard.press("p")
+  await expect(platform).toHaveAttribute("data-platform-status", "paused")
+  await page.getByRole("button", { name: "Plane shooter", exact: true }).click()
+  const plane = page.getByRole("application", {
+    name: "Plane shooter",
+    exact: true,
+    includeHidden: true,
+  })
+  await plane.getByRole("button", { name: "Start flight", exact: true }).click()
+  await expect(plane).toHaveAttribute("data-flight-state", "running")
+  await page.getByRole("button", { name: "Super Kusuma", exact: true }).click()
+  await expect(plane).toHaveAttribute("data-flight-state", "paused")
+  await expect(platform).toHaveAttribute("data-platform-status", "paused")
+  await platform
+    .getByRole("button", { name: "Resume adventure", exact: true })
+    .first()
+    .click()
+  await expect(platform).toHaveAttribute("data-platform-status", "running")
+  await page
+    .getByRole("button", { name: "Take a small detour", exact: true })
+    .click()
+  await expect(platform).toHaveAttribute("data-platform-status", "paused")
+  await expect(platform).not.toBeVisible()
+  await expect(page.locator("[data-whatsapp-link]")).toBeVisible()
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true)
-  await page.emulateMedia({ reducedMotion: "reduce" })
-  await expect(
-    page.getByRole("button", { name: "Play motion", exact: true }),
-  ).toBeDisabled()
-  await expect(playground.getByRole("status")).toContainText("reduced motion")
 })
 
 test("project notes reveal the actual engineering work", async ({ page }) => {
@@ -257,7 +278,7 @@ test("the mobile opening leads into the story before the optional playground", a
   })
   await expect(detour).toHaveAttribute("aria-expanded", "false")
   await expect(
-    page.getByRole("button", { name: "Balance", exact: true }),
+    page.getByRole("button", { name: "Super Kusuma", exact: true }),
   ).not.toBeVisible()
   await read.click()
   await expect(page).toHaveURL(/#work$/)
@@ -372,7 +393,7 @@ test("Snake Xenzia supports play, scoring, touch steering, pause, and switching 
   await expect(game).toHaveAttribute("data-snake-status", "running")
   await page.clock.runFor(170)
   const best = await game.getByText(/^Best this visit/).textContent()
-  await page.getByRole("button", { name: "Shapes", exact: true }).click()
+  await page.getByRole("button", { name: "Super Kusuma", exact: true }).click()
   await expect(game).toHaveAttribute("data-snake-status", "paused")
   await page.getByRole("button", { name: "Snake Xenzia", exact: true }).click()
   await page.getByRole("button", { name: "Restart", exact: true }).click()
@@ -616,4 +637,105 @@ test("experience timeline follows scrolling, replays, and respects reduced motio
     await expect(entry).toHaveCSS("transform", "none")
     await expect(entry).toHaveCSS("opacity", "1")
   }
+})
+
+test("not-found page matches the theme and offers working recovery links", async ({
+  page,
+  browser,
+}) => {
+  await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" })
+  const response = await page.goto("/this-page-does-not-exist")
+  expect(response?.status()).toBe(404)
+  await expect(page).toHaveTitle("Page not found · Kusuma")
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "This page took a detour.",
+  )
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+    "content",
+    /noindex/,
+  )
+  await expect(page.locator("html")).toHaveClass(/dark/)
+  await page.getByRole("button", { name: "light theme", exact: true }).click()
+  await page.reload()
+  await expect(page.locator("html")).toHaveClass(/light/)
+  await expect(
+    page.getByRole("link", { name: "See selected work", exact: true }),
+  ).toHaveAttribute("href", "/#work")
+  for (const width of [320, 390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 })
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true)
+  }
+  await page.getByRole("link", { name: "Back to home", exact: true }).click()
+  await expect(page).toHaveURL(/\/$/)
+  await expect(page.locator("h1")).toContainText("It started")
+
+  const context = await browser.newContext({ javaScriptEnabled: false })
+  const staticPage = await context.newPage()
+  expect((await staticPage.goto("/another-missing-page"))?.status()).toBe(404)
+  await expect(
+    staticPage.getByRole("link", { name: "Back to home", exact: true }),
+  ).toBeVisible()
+  await context.close()
+})
+
+test("404 plane shooter supports scoring, steering, pause, and touch controls", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  await page.goto("/flight-detour")
+  const board = page.getByRole("application", { name: "404 plane shooter" })
+  const player = page.locator("[data-flight-player]")
+  const score = page.locator("[data-flight-score]")
+  await expect(board).toHaveAttribute("data-flight-state", "ready")
+  await page.getByRole("button", { name: "Start flight", exact: true }).click()
+  await expect(board).toHaveAttribute("data-flight-state", "running")
+  await expect
+    .poll(async () => Number(await score.textContent()))
+    .toBeGreaterThanOrEqual(10)
+  const start = await player.getAttribute("transform")
+  await page.keyboard.down("ArrowLeft")
+  await expect.poll(() => player.getAttribute("transform")).not.toBe(start)
+  await page.keyboard.up("ArrowLeft")
+  await page.keyboard.press("Space")
+  await expect(board).toHaveAttribute("data-flight-state", "paused")
+  const stopped = await player.getAttribute("transform")
+  await page.waitForTimeout(150)
+  await expect(player).toHaveAttribute("transform", stopped ?? "")
+  await board
+    .getByRole("button", { name: "Resume flight", exact: true })
+    .first()
+    .click()
+  await expect(board).toHaveAttribute("data-flight-state", "running")
+  await page.getByRole("link", { name: "Back to home", exact: true }).focus()
+  await expect(board).toHaveAttribute("data-flight-state", "paused")
+
+  await page.setViewportSize({ width: 320, height: 900 })
+  await board.scrollIntoViewIfNeeded()
+  await board
+    .getByRole("button", { name: "Resume flight", exact: true })
+    .first()
+    .click()
+  const right = page.getByRole("button", { name: "Steer right", exact: true })
+  const bounds = await right.boundingBox()
+  expect(bounds?.width).toBeGreaterThanOrEqual(44)
+  expect(bounds?.height).toBeGreaterThanOrEqual(44)
+  const before = await player.getAttribute("transform")
+  await page.mouse.move((bounds?.x ?? 0) + 22, (bounds?.y ?? 0) + 22)
+  await page.mouse.down()
+  await expect.poll(() => player.getAttribute("transform")).not.toBe(before)
+  await page.mouse.up()
+  await page
+    .getByRole("button", { name: "Restart flight", exact: true })
+    .click()
+  await expect(score).toHaveText("0")
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true)
 })

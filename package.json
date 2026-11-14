@@ -10,7 +10,7 @@
     "format": "biome check --write .",
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test",
-    "test:unit": "bun test tests/snake.test.ts",
+    "test:unit": "bun test tests/*.test.ts",
     "tailwind:upgrade": "bunx @tailwindcss/upgrade"
   },
   "dependencies": {

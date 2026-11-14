@@ -5,6 +5,7 @@ export function WhatsAppLink() {
 
   return (
     <a
+      data-whatsapp-link
       href="https://wa.me/6287760474110"
       target="_blank"
       rel="noopener noreferrer"
