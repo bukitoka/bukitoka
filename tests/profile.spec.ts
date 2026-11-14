@@ -187,12 +187,10 @@ test("arcade supports platform movement, jumping, and switching games on mobile"
   await page.setViewportSize({ width: 390, height: 844 })
   await page.emulateMedia({ reducedMotion: "reduce" })
   await page.goto("/")
-  await page
-    .getByRole("button", { name: "Take a small detour", exact: true })
-    .click()
+  await page.locator("[data-arcade]").scrollIntoViewIfNeeded()
   await expect(page.locator("[data-whatsapp-link]")).not.toBeVisible()
   const platform = page.getByRole("application", {
-    name: "Super Kusuma platform game",
+    name: "Mini Jump platform game",
     includeHidden: true,
   })
   await expect(platform).toHaveAttribute("data-platform-status", "ready")
@@ -214,16 +212,16 @@ test("arcade supports platform movement, jumping, and switching games on mobile"
     .toBeLessThan(210)
   await page.keyboard.press("p")
   await expect(platform).toHaveAttribute("data-platform-status", "paused")
-  await page.getByRole("button", { name: "Plane shooter", exact: true }).click()
-  const plane = page.getByRole("application", {
-    name: "Plane shooter",
+  await page.getByRole("button", { name: "Arcade Racer", exact: true }).click()
+  const racer = page.getByRole("application", {
+    name: "Arcade racing game",
     exact: true,
     includeHidden: true,
   })
-  await plane.getByRole("button", { name: "Start flight", exact: true }).click()
-  await expect(plane).toHaveAttribute("data-flight-state", "running")
-  await page.getByRole("button", { name: "Super Kusuma", exact: true }).click()
-  await expect(plane).toHaveAttribute("data-flight-state", "paused")
+  await racer.getByRole("button", { name: "Start racing", exact: true }).click()
+  await expect(racer).toHaveAttribute("data-race-status", "running")
+  await page.getByRole("button", { name: "Mini Jump", exact: true }).click()
+  await expect(racer).toHaveAttribute("data-race-status", "paused")
   await expect(platform).toHaveAttribute("data-platform-status", "paused")
   await platform
     .getByRole("button", { name: "Resume adventure", exact: true })
@@ -276,10 +274,10 @@ test("the mobile opening leads into the story before the optional playground", a
     name: "Take a small detour",
     exact: true,
   })
-  await expect(detour).toHaveAttribute("aria-expanded", "false")
+  await expect(detour).toHaveAttribute("aria-expanded", "true")
   await expect(
-    page.getByRole("button", { name: "Super Kusuma", exact: true }),
-  ).not.toBeVisible()
+    page.getByRole("button", { name: "Mini Jump", exact: true }),
+  ).toBeVisible()
   await read.click()
   await expect(page).toHaveURL(/#work$/)
   await expect(
@@ -296,6 +294,7 @@ test("WhatsApp badge links to the resume number and respects reduced motion", as
   await page.setViewportSize({ width: 320, height: 740 })
   await page.emulateMedia({ reducedMotion: "no-preference" })
   await page.goto("/")
+  await page.locator("#about").scrollIntoViewIfNeeded()
   const badge = page.getByRole("link", {
     name: "Chat with Kusuma on WhatsApp",
     exact: true,
@@ -374,9 +373,6 @@ test("Snake Xenzia supports play, scoring, touch steering, pause, and switching 
   await page.setViewportSize({ width: 390, height: 844 })
   await page.emulateMedia({ reducedMotion: "reduce" })
   await page.goto("/")
-  await page
-    .getByRole("button", { name: "Take a small detour", exact: true })
-    .click()
   await page.getByRole("button", { name: "Snake Xenzia", exact: true }).click()
   const game = page.locator("[data-snake-status]")
   await expect(game).toHaveAttribute("data-snake-status", "ready")
@@ -392,12 +388,12 @@ test("Snake Xenzia supports play, scoring, touch steering, pause, and switching 
   await page.getByRole("button", { name: "Steer up", exact: true }).click()
   await expect(game).toHaveAttribute("data-snake-status", "running")
   await page.clock.runFor(170)
-  const best = await game.getByText(/^Best this visit/).textContent()
-  await page.getByRole("button", { name: "Super Kusuma", exact: true }).click()
+  const best = await game.getByText(/^Best /).textContent()
+  await page.getByRole("button", { name: "Mini Jump", exact: true }).click()
   await expect(game).toHaveAttribute("data-snake-status", "paused")
   await page.getByRole("button", { name: "Snake Xenzia", exact: true }).click()
   await page.getByRole("button", { name: "Restart", exact: true }).click()
-  await expect(game.getByText(/^Best this visit/)).toHaveText(best ?? "")
+  await expect(game.getByText(/^Best /)).toHaveText(best ?? "")
   await expect(game.getByRole("status")).toContainText("Score 0")
   await page
     .getByRole("button", { name: "Snake Xenzia game board", exact: true })
@@ -738,4 +734,253 @@ test("404 plane shooter supports scoring, steering, pause, and touch controls", 
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true)
+})
+
+test("homepage racing replaces the plane and supports steering, distance, pause, and restart", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  await page.goto("/")
+  await expect(page.locator("[data-flight-state]")).toHaveCount(0)
+  await page.getByRole("button", { name: "Arcade Racer", exact: true }).click()
+  const racer = page.getByRole("application", { name: "Arcade racing game" })
+  await page.getByRole("button", { name: "Start racing", exact: true }).click()
+  await expect(racer).toHaveAttribute("data-race-status", "running")
+  const car = page.locator("[data-race-player]")
+  await page.keyboard.press("ArrowLeft")
+  await expect(car).toHaveAttribute("transform", "translate(120.00 244)")
+  await expect
+    .poll(async () =>
+      Number(await page.locator("[data-race-distance]").textContent()),
+    )
+    .toBeGreaterThan(0)
+  await page.keyboard.press("Space")
+  await expect(racer).toHaveAttribute("data-race-status", "paused")
+  const distance = await page.locator("[data-race-distance]").textContent()
+  await page.waitForTimeout(150)
+  await expect(page.locator("[data-race-distance]")).toHaveText(distance ?? "")
+  await racer
+    .getByRole("button", { name: "Resume racing", exact: true })
+    .first()
+    .click()
+  const right = page.getByRole("button", {
+    name: "Change lane right",
+    exact: true,
+  })
+  await right.click()
+  await expect(car).toHaveAttribute("transform", "translate(210.00 244)")
+  await right.click()
+  await expect(car).toHaveAttribute("transform", "translate(300.00 244)")
+  await right.click()
+  await expect(car).toHaveAttribute("transform", "translate(300.00 244)")
+  await page
+    .getByRole("button", { name: "Restart racing", exact: true })
+    .click()
+  await expect(car).toHaveAttribute("transform", "translate(210.00 244)")
+  await expect(page.locator("[data-race-distance]")).toHaveText("0")
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true)
+})
+
+test("arcade restores saved worlds and checkpoints without starting automatically", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      "bukitoka.arcade.jump.v1",
+      JSON.stringify({
+        version: 1,
+        level: 3,
+        checkpoint: 2360,
+        best: 8,
+        completed: false,
+      }),
+    )
+    localStorage.setItem(
+      "bukitoka.arcade.racing.v1",
+      JSON.stringify({
+        version: 1,
+        level: 3,
+        checkpoint: 0,
+        best: 300,
+        completed: false,
+      }),
+    )
+    localStorage.setItem(
+      "bukitoka.arcade.snake.v1",
+      JSON.stringify({
+        version: 1,
+        level: 2,
+        checkpoint: 0,
+        best: 17,
+        completed: false,
+      }),
+    )
+  })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto("/")
+  const jump = page.locator("[data-platform-status]")
+  await expect(jump).toHaveAttribute("data-platform-status", "ready")
+  await page
+    .getByRole("button", { name: "Continue world 3", exact: true })
+    .click()
+  await expect(page.locator("[data-platform-boss]")).toHaveCount(1)
+  await expect(page.locator("[data-platform-player]")).toHaveAttribute(
+    "transform",
+    /translate\(2360 /,
+  )
+  await page.getByRole("button", { name: "Arcade Racer", exact: true }).click()
+  await page
+    .getByRole("button", { name: "Continue level 3", exact: true })
+    .click()
+  await expect(page.locator("[data-race-status]")).toContainText("FINAL RIVAL")
+  await page.getByRole("button", { name: "Snake Xenzia", exact: true }).click()
+  const snake = page.locator("[data-snake-status]")
+  await expect(snake).toContainText("Best 17")
+  await page
+    .getByRole("button", { name: "Continue level 2", exact: true })
+    .click()
+  await expect(snake).toHaveAttribute("data-snake-status", "running")
+  await expect(snake).toContainText("L2")
+  const board = await page
+    .getByRole("button", { name: "Snake Xenzia game board", exact: true })
+    .boundingBox()
+  expect((board?.width ?? 0) / (board?.height ?? 1)).toBeCloseTo(1.5, 1)
+})
+
+test("snake best score persists after reload and blocked storage does not break the arcade", async ({
+  page,
+  browser,
+}) => {
+  await page.clock.install()
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto("/")
+  await page.getByRole("button", { name: "Snake Xenzia", exact: true }).click()
+  await page.getByRole("button", { name: "Start game", exact: true }).click()
+  await page.clock.runFor(700)
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          JSON.parse(localStorage.getItem("bukitoka.arcade.snake.v1") ?? "{}")
+            .best,
+      ),
+    )
+    .toBe(1)
+  await page.reload()
+  await page.getByRole("button", { name: "Snake Xenzia", exact: true }).click()
+  await expect(page.locator("[data-snake-status]")).toContainText("Best 01")
+
+  const context = await browser.newContext()
+  const blocked = await context.newPage()
+  const errors: string[] = []
+  blocked.on("pageerror", (error) => errors.push(error.message))
+  await blocked.addInitScript(() => {
+    Storage.prototype.getItem = () => {
+      throw new Error("Storage blocked")
+    }
+    Storage.prototype.setItem = () => {
+      throw new Error("Storage blocked")
+    }
+  })
+  await blocked.goto("/")
+  await blocked
+    .getByRole("button", { name: "Start adventure", exact: true })
+    .click()
+  await expect(blocked.locator("[data-platform-status]")).toHaveAttribute(
+    "data-platform-status",
+    "running",
+  )
+  expect(errors).toEqual([])
+  await context.close()
+})
+
+test("404 flight continues an unlocked boss level and renders its attacks", async ({
+  page,
+}) => {
+  await page.clock.install()
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      "bukitoka.arcade.flight.v1",
+      JSON.stringify({
+        version: 1,
+        level: 3,
+        best: 160,
+        checkpoint: 0,
+        completed: false,
+      }),
+    )
+  })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  await page.goto("/flight-final-boss")
+  const game = page.locator("[data-flight-state]")
+  await expect(game).toHaveAttribute("data-flight-state", "ready")
+  await page
+    .getByRole("button", { name: "Continue flight level 3", exact: true })
+    .click()
+  await expect(game).toHaveAttribute("data-flight-level", "3")
+  await expect(page.locator("[data-flight-boss]")).toHaveCount(1)
+  await page.clock.runFor(1500)
+  await expect
+    .poll(() => page.locator("[data-flight-bolt]").count())
+    .toBeGreaterThan(0)
+  await page.getByRole("button", { name: "Pause flight", exact: true }).click()
+  await expect(game).toHaveAttribute("data-flight-state", "paused")
+  await page.reload()
+  await expect(
+    page.getByRole("button", { name: "Continue flight level 3", exact: true }),
+  ).toBeVisible()
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true)
+})
+
+test("mobile arcade opens by default and suppresses selection and long-press menus", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto("/")
+  const toggle = page.getByRole("button", {
+    name: "Take a small detour",
+    exact: true,
+  })
+  await expect(toggle).toHaveAttribute("aria-expanded", "true")
+  const start = page.getByRole("button", {
+    name: "Start adventure",
+    exact: true,
+  })
+  await expect(start).toBeVisible()
+  await expect(start).toHaveCSS("user-select", "none")
+  await expect(start).toHaveCSS("touch-action", "none")
+  const contextMenuAllowed = () =>
+    start.evaluate((element) =>
+      element.dispatchEvent(
+        new MouseEvent("contextmenu", { bubbles: true, cancelable: true }),
+      ),
+    )
+  expect(await contextMenuAllowed()).toBe(false)
+  await toggle.click()
+  await expect(start).not.toBeVisible()
+  await expect(toggle).toHaveAttribute("aria-expanded", "false")
+  await page.setViewportSize({ width: 1440, height: 900 })
+  expect(await contextMenuAllowed()).toBe(true)
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto("/mobile-flight")
+  const flight = page.getByRole("button", { name: "Start flight", exact: true })
+  await expect(flight).toHaveCSS("user-select", "none")
+  expect(
+    await flight.evaluate((element) =>
+      element.dispatchEvent(
+        new MouseEvent("contextmenu", { bubbles: true, cancelable: true }),
+      ),
+    ),
+  ).toBe(false)
 })

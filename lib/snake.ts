@@ -1,4 +1,5 @@
-export const BOARD_SIZE = 18
+export const BOARD_WIDTH = 24
+export const BOARD_HEIGHT = 16
 
 export type Direction = "up" | "right" | "down" | "left"
 
@@ -12,11 +13,17 @@ export type SnakeState = {
   status: GameStatus
   score: number
   best: number
+  level: number
+  eaten: number
+  bonus: number | null
+  bonusTicks: number
+  slowTicks: number
 }
 
 export type SnakeAction =
   | { type: "turn"; direction: Direction }
-  | { type: "tick" | "start" | "pause" | "restart" }
+  | { type: "tick" | "start" | "pause" }
+  | { type: "restart"; level?: number; best?: number }
 
 const vectors: Record<Direction, readonly [number, number]> = {
   up: [0, -1],
@@ -38,15 +45,15 @@ export function placeFood(
 ): number | null {
   const occupied = new Set(snake)
   const free = Array.from(
-    { length: BOARD_SIZE * BOARD_SIZE },
+    { length: BOARD_WIDTH * BOARD_HEIGHT },
     (_, cell) => cell,
   ).filter((cell) => !occupied.has(cell))
 
   return free.length ? free[Math.floor(random() * free.length)] : null
 }
 
-export function createSnakeGame(best = 0): SnakeState {
-  const head = 9 * BOARD_SIZE + 7
+export function createSnakeGame(best = 0, level = 1): SnakeState {
+  const head = 8 * BOARD_WIDTH + 7
 
   return {
     snake: [head, head - 1, head - 2],
@@ -56,6 +63,11 @@ export function createSnakeGame(best = 0): SnakeState {
     status: "ready",
     score: 0,
     best,
+    level,
+    eaten: (level - 1) * 5,
+    bonus: null,
+    bonusTicks: 0,
+    slowTicks: 0,
   }
 }
 
@@ -63,23 +75,36 @@ export function stepSnake(state: SnakeState, random = Math.random): SnakeState {
   if (state.status !== "running") return state
   const direction = state.queued ?? state.direction
   const [dx, dy] = vectors[direction]
-  const x = (state.snake[0] % BOARD_SIZE) + dx
-  const y = Math.floor(state.snake[0] / BOARD_SIZE) + dy
-  const head = y * BOARD_SIZE + x
-  const grows = head === state.food
+  const x = (state.snake[0] % BOARD_WIDTH) + dx
+  const y = Math.floor(state.snake[0] / BOARD_WIDTH) + dy
+  const head = y * BOARD_WIDTH + x
+  const special = head === state.bonus && state.bonusTicks > 0
+  const regular = head === state.food
+  const grows = regular || special
   const body = grows ? state.snake : state.snake.slice(0, -1)
   if (
     x < 0 ||
-    x >= BOARD_SIZE ||
+    x >= BOARD_WIDTH ||
     y < 0 ||
-    y >= BOARD_SIZE ||
+    y >= BOARD_HEIGHT ||
     body.includes(head)
   )
     return { ...state, direction, queued: null, status: "over" }
   const snake = [head, ...state.snake]
   if (!grows) snake.pop()
-  const score = state.score + (grows ? 1 : 0)
-  const food = grows ? placeFood(snake, random) : state.food
+  const score = state.score + (regular ? 1 : special ? 3 : 0)
+  const eaten = state.eaten + (regular ? 1 : 0)
+  let food = regular ? placeFood(snake, random) : state.food
+  let bonusTicks = Math.max(0, state.bonusTicks - 1)
+  let bonus = special || bonusTicks === 0 ? null : state.bonus
+  if (regular && eaten % 3 === 0) {
+    bonus = placeFood(food === null ? snake : [...snake, food], random)
+    bonusTicks = bonus === null ? 0 : 50
+  } else if (food !== null && food === bonus) {
+    bonus = placeFood([...snake, food], random)
+  }
+  if (food === null && snake.length < BOARD_WIDTH * BOARD_HEIGHT)
+    food = placeFood(snake, random)
 
   return {
     ...state,
@@ -88,6 +113,11 @@ export function stepSnake(state: SnakeState, random = Math.random): SnakeState {
     queued: null,
     food,
     score,
+    eaten,
+    level: Math.min(3, 1 + Math.floor(eaten / 5)),
+    bonus,
+    bonusTicks,
+    slowTicks: special ? 40 : Math.max(0, state.slowTicks - 1),
     best: Math.max(state.best, score),
     status: food === null ? "won" : "running",
   }
@@ -114,6 +144,12 @@ export function snakeReducer(
     case "pause":
       return state.status === "running" ? { ...state, status: "paused" } : state
     case "restart":
-      return { ...createSnakeGame(state.best), status: "running" }
+      return {
+        ...createSnakeGame(
+          Math.max(state.best, action.best ?? 0),
+          action.level ?? 1,
+        ),
+        status: "running",
+      }
   }
 }

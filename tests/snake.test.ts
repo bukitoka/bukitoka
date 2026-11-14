@@ -1,7 +1,8 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
 import {
-  BOARD_SIZE,
+  BOARD_HEIGHT,
+  BOARD_WIDTH,
   createSnakeGame,
   placeFood,
   snakeReducer,
@@ -37,12 +38,12 @@ describe("Snake Xenzia rules", () => {
     const next = stepSnake(up)
     assert.equal(next.direction, "up")
     assert.equal(next.queued, null)
-    assert.equal(next.snake[0], game.snake[0] - BOARD_SIZE)
+    assert.equal(next.snake[0], game.snake[0] - BOARD_WIDTH)
   })
   it("ends at the wall instead of wrapping to another row", () => {
     const game = {
       ...createSnakeGame(),
-      snake: [17, 16, 15],
+      snake: [BOARD_WIDTH - 1, BOARD_WIDTH - 2, BOARD_WIDTH - 3],
       status: "running" as const,
     }
     assert.equal(stepSnake(game).status, "over")
@@ -50,7 +51,14 @@ describe("Snake Xenzia rules", () => {
   it("ends when hitting its body", () => {
     const game = {
       ...createSnakeGame(),
-      snake: [19, 20, 38, 37, 36, 18],
+      snake: [
+        BOARD_WIDTH + 1,
+        BOARD_WIDTH + 2,
+        2 * BOARD_WIDTH + 2,
+        2 * BOARD_WIDTH + 1,
+        2 * BOARD_WIDTH,
+        BOARD_WIDTH,
+      ],
       direction: "left" as const,
       queued: "down" as const,
       status: "running" as const,
@@ -61,7 +69,12 @@ describe("Snake Xenzia rules", () => {
   it("allows moving into the cell the tail is leaving", () => {
     const game = {
       ...createSnakeGame(),
-      snake: [19, 20, 38, 37],
+      snake: [
+        BOARD_WIDTH + 1,
+        BOARD_WIDTH + 2,
+        2 * BOARD_WIDTH + 2,
+        2 * BOARD_WIDTH + 1,
+      ],
       direction: "left" as const,
       queued: "down" as const,
       status: "running" as const,
@@ -69,11 +82,16 @@ describe("Snake Xenzia rules", () => {
     }
     const next = stepSnake(game)
     assert.equal(next.status, "running")
-    assert.deepEqual(next.snake, [37, 19, 20, 38])
+    assert.deepEqual(next.snake, [
+      2 * BOARD_WIDTH + 1,
+      BOARD_WIDTH + 1,
+      BOARD_WIDTH + 2,
+      2 * BOARD_WIDTH + 2,
+    ])
   })
   it("places food only in free cells and finishes on a full board", () => {
     const full = Array.from(
-      { length: BOARD_SIZE * BOARD_SIZE },
+      { length: BOARD_WIDTH * BOARD_HEIGHT },
       (_, cell) => cell,
     )
     assert.equal(placeFood(full), null)
@@ -90,6 +108,28 @@ describe("Snake Xenzia rules", () => {
     const next = stepSnake(game)
     assert.equal(next.status, "won")
     assert.equal(next.food, null)
-    assert.equal(next.snake.length, BOARD_SIZE * BOARD_SIZE)
+    assert.equal(next.snake.length, BOARD_WIDTH * BOARD_HEIGHT)
   })
+})
+
+it("spawns a timed special circle every third food and rewards it with a slow-down", () => {
+  const ready = createSnakeGame()
+  const base = {
+    ...ready,
+    status: "running" as const,
+    eaten: 2,
+    food: ready.snake[0] + 1,
+  }
+  const spawned = stepSnake(base, () => 0)
+  assert.notEqual(spawned.bonus, null)
+  assert.ok(!spawned.snake.includes(spawned.bonus ?? -1))
+  assert.notEqual(spawned.food, spawned.bonus)
+  const ahead = spawned.snake[0] + 1
+  const eaten = stepSnake({ ...spawned, bonus: ahead, food: 0 }, () => 0)
+  assert.equal(eaten.score, spawned.score + 3)
+  assert.equal(eaten.slowTicks, 40)
+  assert.equal(eaten.bonus, null)
+  assert.equal(stepSnake({ ...spawned, bonusTicks: 1 }).bonus, null)
+  const higher = stepSnake({ ...base, eaten: 4 }, () => 0)
+  assert.equal(higher.level, 2)
 })

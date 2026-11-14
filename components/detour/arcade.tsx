@@ -4,26 +4,30 @@ import { Plus } from "lucide-react"
 import { useInView } from "motion/react"
 import { useId, useRef, useState } from "react"
 import { PlatformGame } from "@/components/detour/platform-game"
+import { RacingGame } from "@/components/detour/racing-game"
 import { SnakeGame } from "@/components/detour/snake-game"
-import { PlaneGame } from "@/components/plane-game"
+import { preventGameContextMenu } from "@/lib/game-input"
 
 const games = [
-  { value: "platform", label: "Super Kusuma" },
+  { value: "platform", label: "Mini Jump" },
   { value: "snake", label: "Snake Xenzia" },
-  { value: "plane", label: "Plane shooter" },
+  { value: "racing", label: "Arcade Racer" },
 ] as const
 
 export function Arcade() {
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(true)
   const [mode, setMode] = useState<(typeof games)[number]["value"]>("platform")
   const content = useId()
   const ref = useRef<HTMLDivElement>(null)
   const inView = useInView(ref, { amount: 0.15 })
 
   return (
-    <div
-      className="border border-border bg-card"
+    <fieldset
+      className="min-w-0 border border-border bg-card"
+      aria-label="Mini arcade"
       data-arcade
+      data-game
+      onContextMenu={preventGameContextMenu}
       data-arcade-visible={inView}
     >
       <button
@@ -72,10 +76,10 @@ export function Arcade() {
         <div hidden={mode !== "snake"}>
           <SnakeGame />
         </div>
-        <div hidden={mode !== "plane"}>
-          <PlaneGame arcade />
+        <div hidden={mode !== "racing"}>
+          <RacingGame />
         </div>
       </div>
-    </div>
+    </fieldset>
   )
 }

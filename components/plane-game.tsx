@@ -10,22 +10,37 @@ import {
   useRef,
 } from "react"
 import { Button } from "@/components/ui/button"
+import { preventGameContextMenu } from "@/lib/game-input"
 import {
   createFlight,
+  FLIGHT_BOSS_HP,
+  FLIGHT_GOALS,
   FLIGHT_HEIGHT,
   FLIGHT_WIDTH,
+  flightBossX,
   flightReducer,
   PLAYER_Y,
 } from "@/lib/plane-game"
+import { useArcadeProgress } from "@/lib/use-arcade-progress"
 import { useReducedMotion } from "@/lib/use-motion-preference"
 
-export function PlaneGame({ arcade = false }: { arcade?: boolean }) {
+export function PlaneGame() {
   const [game, dispatch] = useReducer(flightReducer, undefined, createFlight)
   const board = useRef<HTMLDivElement>(null)
   const direction = useRef(0)
   const instructions = useId()
   const reduce = useReducedMotion()
   const running = game.status === "running"
+  const { progress, save } = useArcadeProgress("flight")
+  const displayLevel = game.status === "ready" ? progress.level : game.level
+  useEffect(() => {
+    if (game.status !== "ready")
+      save({
+        best: game.score,
+        level: game.status === "cleared" ? game.level + 1 : game.level,
+        completed: game.status === "won",
+      })
+  }, [game.score, game.status, game.level, save])
 
   useEffect(() => {
     if (!running) return
@@ -68,9 +83,15 @@ export function PlaneGame({ arcade = false }: { arcade?: boolean }) {
     }
   }, [])
 
-  function start() {
+  function start(level = 1) {
     direction.current = 0
-    dispatch({ type: "start" })
+    dispatch({ type: "start", level })
+    board.current?.focus({ preventScroll: true })
+  }
+
+  function nextLevel() {
+    direction.current = 0
+    dispatch({ type: "next" })
     board.current?.focus({ preventScroll: true })
   }
 
@@ -89,8 +110,13 @@ export function PlaneGame({ arcade = false }: { arcade?: boolean }) {
     } else if ([" ", "p", "escape"].includes(key)) {
       event.preventDefault()
       if (!event.repeat) {
-        if (game.status === "ready" || game.status === "over") start()
-        else if (key === "escape") dispatch({ type: "pause" })
+        if (key === "escape") {
+          direction.current = 0
+          dispatch({ type: "pause" })
+        } else if (game.status === "ready") start(progress.level)
+        else if (game.status === "over") start(game.level)
+        else if (game.status === "cleared") nextLevel()
+        else if (game.status === "won") start()
         else togglePause()
       }
     }
@@ -106,10 +132,13 @@ export function PlaneGame({ arcade = false }: { arcade?: boolean }) {
     <div
       ref={board}
       role="application"
-      aria-label={arcade ? "Plane shooter" : "404 plane shooter"}
+      aria-label="404 plane shooter"
       aria-describedby={instructions}
       tabIndex={-1}
+      data-game
+      onContextMenu={preventGameContextMenu}
       data-flight-state={game.status}
+      data-flight-level={game.level}
       onKeyDown={keyDown}
       onKeyUp={(event) => {
         if (["ArrowLeft", "ArrowRight", "a", "A", "d", "D"].includes(event.key))
@@ -121,12 +150,16 @@ export function PlaneGame({ arcade = false }: { arcade?: boolean }) {
           dispatch({ type: "pause" })
         }
       }}
-      className={`mx-auto w-full focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring ${arcade ? "p-3 sm:p-4" : "max-w-lg border border-border bg-card p-4 sm:p-6"}`}
+      className="mx-auto w-full max-w-lg border border-border bg-card p-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring sm:p-6"
     >
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 font-mono text-xs text-muted-foreground">
-        <span>{arcade ? "FLIGHT DETOUR" : "404 / FLIGHT DETOUR"}</span>
         <span>
-          Score <span data-flight-score>{game.score}</span> · Lives {game.lives}
+          FLIGHT / LEVEL {game.status === "ready" ? progress.level : game.level}{" "}
+          / 3
+        </span>
+        <span>
+          Score <span data-flight-score>{game.score}</span> · Lives {game.lives}{" "}
+          · Best {progress.best}
         </span>
       </div>
       <div className="relative overflow-hidden border border-border bg-background">
@@ -142,7 +175,7 @@ export function PlaneGame({ arcade = false }: { arcade?: boolean }) {
             fontSize="130"
             className="fill-muted font-heading"
           >
-            {arcade ? "FLY" : "404"}
+            404
           </text>
           {[36, 108, 180, 252].map((y, i) => (
             <path
@@ -184,7 +217,59 @@ export function PlaneGame({ arcade = false }: { arcade?: boolean }) {
               />
             </g>
           ))}
-          <g data-flight-player transform={`translate(${game.x} ${PLAYER_Y})`}>
+          {game.level === 3 && game.bossHp > 0 && (
+            <g
+              data-flight-boss
+              transform={`translate(${flightBossX(game.elapsed)} 55)`}
+            >
+              <path
+                d="M-55 12L-42-10H-20L-12-24H12L20-10H42L55 12L36 23H-36Z"
+                className="fill-brand-400"
+              />
+              <path d="M-16-11H16V5H-16Z" className="fill-brand-900" />
+              <path
+                d="M-35 9H-24M24 9H35"
+                className="stroke-brand-100"
+                strokeWidth="4"
+              />
+              <circle
+                cy="23"
+                r="6"
+                className={
+                  game.attackIn < 0.45 ? "fill-action" : "fill-brand-300"
+                }
+              />
+              <rect
+                x="-60"
+                y="-38"
+                width="120"
+                height="5"
+                className="fill-muted"
+              />
+              <rect
+                x="-60"
+                y="-38"
+                width={(120 * game.bossHp) / FLIGHT_BOSS_HP}
+                height="5"
+                className="fill-action"
+              />
+            </g>
+          )}
+          {game.bolts.map((bolt) => (
+            <circle
+              key={bolt.id}
+              data-flight-bolt
+              cx={bolt.x}
+              cy={bolt.y}
+              r="5"
+              className="fill-action"
+            />
+          ))}
+          <g
+            data-flight-player
+            transform={`translate(${game.x} ${PLAYER_Y})`}
+            opacity={game.shield > 0 ? 0.6 : 1}
+          >
             {!reduce && running && (
               <path d="M-4 14L0 25L4 14" className="fill-brand-400" />
             )}
@@ -200,37 +285,57 @@ export function PlaneGame({ arcade = false }: { arcade?: boolean }) {
           </g>
         </svg>
         {!running && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-background/90 px-4 text-center">
-            <p className="font-heading text-2xl tracking-tight sm:text-3xl">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/90 px-4 text-center">
+            <p className="font-heading text-xl leading-tight tracking-tight lg:text-3xl">
               {game.status === "ready"
-                ? arcade
-                  ? "Clear for takeoff."
-                  : "Lost page. Found a plane."
+                ? "Lost page. Found a plane."
                 : game.status === "paused"
                   ? "Holding position."
-                  : "Flight over."}
+                  : game.status === "cleared"
+                    ? "Airspace cleared."
+                    : game.status === "won"
+                      ? "Boss down. Safe skies."
+                      : "Flight over."}
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="max-w-64 text-xs leading-relaxed text-muted-foreground">
               {game.status === "over"
                 ? `You scored ${game.score}. Ready for another flight?`
-                : "Clear the shapes. Don’t let them past you."}
+                : game.status === "cleared"
+                  ? "Next level: faster targets and tighter waves."
+                  : game.status === "won"
+                    ? "All three levels complete. Nice flying."
+                    : (game.status === "ready"
+                          ? progress.level
+                          : game.level) === 3
+                      ? "Defeat the mothership. Dodge its amber bolts while your cannons fire."
+                      : "Clear the target quota to unlock the next level. Don’t let shapes pass you."}
             </p>
             <Button
-              onClick={
-                game.status === "paused"
-                  ? () => {
-                      dispatch({ type: "resume" })
-                      board.current?.focus({ preventScroll: true })
-                    }
-                  : start
-              }
+              onClick={() => {
+                if (game.status === "paused") {
+                  dispatch({ type: "resume" })
+                  board.current?.focus({ preventScroll: true })
+                } else if (game.status === "cleared") nextLevel()
+                else
+                  start(
+                    game.status === "ready"
+                      ? progress.level
+                      : game.status === "over"
+                        ? game.level
+                        : 1,
+                  )
+              }}
             >
               <Play size={16} aria-hidden="true" />
               {game.status === "paused"
                 ? "Resume flight"
-                : game.status === "over"
-                  ? "Play again"
-                  : "Start flight"}
+                : game.status === "cleared"
+                  ? "Next flight level"
+                  : game.status === "over" || game.status === "won"
+                    ? "Play again"
+                    : progress.level > 1
+                      ? `Continue flight level ${progress.level}`
+                      : "Start flight"}
             </Button>
           </div>
         )}
@@ -270,7 +375,7 @@ export function PlaneGame({ arcade = false }: { arcade?: boolean }) {
         <div className="flex gap-2">
           <button
             type="button"
-            disabled={game.status === "ready" || game.status === "over"}
+            disabled={game.status !== "running" && game.status !== "paused"}
             onClick={togglePause}
             aria-label={running ? "Pause flight" : "Resume flight"}
             className="grid size-11 place-items-center border border-border hover:bg-muted disabled:opacity-40"
@@ -283,7 +388,7 @@ export function PlaneGame({ arcade = false }: { arcade?: boolean }) {
           </button>
           <button
             type="button"
-            onClick={start}
+            onClick={() => start()}
             aria-label="Restart flight"
             className="grid size-11 place-items-center border border-border hover:bg-muted"
           >
@@ -296,16 +401,24 @@ export function PlaneGame({ arcade = false }: { arcade?: boolean }) {
         className="mt-3 text-xs leading-relaxed text-muted-foreground"
       >
         ← → or A / D to steer. Shots fire automatically. Space to pause. On
-        mobile, hold the arrow buttons.
+        mobile, hold the arrow buttons.{" "}
+        {displayLevel === 3
+          ? `Mothership: ${game.status === "ready" ? FLIGHT_BOSS_HP : game.bossHp}/${FLIGHT_BOSS_HP} health. Dodge the amber spread.`
+          : `Targets: ${game.kills}/${FLIGHT_GOALS[game.level - 1]}.`}{" "}
+        Unlocked levels save on this device.
       </p>
       <p role="status" className="sr-only">
-        {game.status === "over"
-          ? `Flight over. Score ${game.score}.`
-          : game.status === "paused"
-            ? "Flight paused."
-            : game.status === "running"
-              ? "Flight started. Use arrow keys to steer."
-              : "Ready to fly."}
+        {game.status === "won"
+          ? "Final boss defeated. Flight complete."
+          : game.status === "cleared"
+            ? `Flight level ${game.level} cleared.`
+            : game.status === "over"
+              ? `Flight over. Score ${game.score}.`
+              : game.status === "paused"
+                ? "Flight paused."
+                : game.status === "running"
+                  ? "Flight started. Use arrow keys to steer."
+                  : "Ready to fly."}
       </p>
     </div>
   )

@@ -48,7 +48,7 @@ export function HeroSection() {
         >
           <Arcade />
           <p className="mt-3 hidden text-xs leading-relaxed text-muted-foreground sm:block">
-            A platform adventure, a little Nokia nostalgia, or a quick flight.
+            A platform adventure, a little Nokia nostalgia, or a few laps.
           </p>
         </Parallax>
       </div>

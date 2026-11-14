@@ -17,7 +17,9 @@ import {
   useRef,
 } from "react"
 import { Button } from "@/components/ui/button"
+import { preventGameContextMenu } from "@/lib/game-input"
 import {
+  bossX,
   coins,
   createPlatformGame,
   enemies,
@@ -31,6 +33,7 @@ import {
   platforms,
   WORLD_WIDTH,
 } from "@/lib/platform-game"
+import { useArcadeProgress } from "@/lib/use-arcade-progress"
 import { useReducedMotion } from "@/lib/use-motion-preference"
 
 export function PlatformGame() {
@@ -45,6 +48,16 @@ export function PlatformGame() {
   const bricks = useId()
   const reduce = useReducedMotion()
   const running = game.status === "running"
+  const { progress, save } = useArcadeProgress("jump")
+  useEffect(() => {
+    if (game.status === "ready") return
+    save({
+      level: game.status === "cleared" ? game.level + 1 : game.level,
+      checkpoint: game.status === "cleared" ? 42 : game.checkpoint,
+      best: game.collected.length,
+      completed: game.status === "won",
+    })
+  }, [game.status, game.level, game.checkpoint, game.collected.length, save])
   const camera = Math.max(
     0,
     Math.min(WORLD_WIDTH - PLATFORM_WIDTH, game.x - 130),
@@ -91,9 +104,9 @@ export function PlatformGame() {
     }
   }, [])
 
-  function start() {
+  function start(level = 1, checkpoint = 42) {
     direction.current = 0
-    dispatch({ type: "start" })
+    dispatch({ type: "start", level, checkpoint })
     board.current?.focus({ preventScroll: true })
   }
 
@@ -131,9 +144,11 @@ export function PlatformGame() {
     <div
       ref={board}
       role="application"
-      aria-label="Super Kusuma platform game"
+      aria-label="Mini Jump platform game"
       aria-describedby={instructions}
       tabIndex={-1}
+      data-game
+      onContextMenu={preventGameContextMenu}
       data-platform-status={game.status}
       onKeyDown={keyDown}
       onKeyUp={(event) => {
@@ -149,7 +164,10 @@ export function PlatformGame() {
       className="p-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:p-4"
     >
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 font-mono text-xs text-muted-foreground">
-        <span>WORLD 01</span>
+        <span>
+          WORLD 0{game.status === "ready" ? progress.level : game.level}
+          {game.level === 3 && game.x > 2250 ? ` · BOSS ${game.bossHp}/3` : ""}
+        </span>
         <span>
           Coins <span data-platform-coins>{game.collected.length}</span> /{" "}
           {coins.length} · Lives {game.lives}
@@ -269,10 +287,11 @@ export function PlatformGame() {
             <path d={`M${FLAG_X} 102h55l-12 30h-43Z`} className="fill-action" />
             {enemies.map(
               (_, index) =>
-                !game.defeated.includes(index) && (
+                !game.defeated.includes(index) &&
+                !(game.level === 3 && index >= 4) && (
                   <g
                     key={enemies[index]}
-                    transform={`translate(${enemyX(index, game.elapsed)} ${GROUND_Y - 18})`}
+                    transform={`translate(${enemyX(index, game.elapsed, game.level)} ${GROUND_Y - 18})`}
                   >
                     <path
                       d="M-11 18V5A11 11 0 0 1 11 5V18Z"
@@ -285,6 +304,33 @@ export function PlatformGame() {
                     />
                   </g>
                 ),
+            )}
+            {game.level === 3 && game.bossHp > 0 && (
+              <g
+                data-platform-boss
+                transform={`translate(${bossX(game.elapsed)} ${GROUND_Y - 44})`}
+                opacity={game.bossShield > 0 ? 0.6 : 1}
+              >
+                <path
+                  d="M-23 44V12L-14 0L0 7L14 0L23 12V44Z"
+                  className="fill-brand-400"
+                />
+                <path
+                  d="M-13 17H-5M5 17H13M-9 31H9"
+                  className="stroke-background"
+                  strokeWidth="4"
+                />
+                {[0, 1, 2].map((i) => (
+                  <rect
+                    key={i}
+                    x={-20 + i * 15}
+                    y="-12"
+                    width="10"
+                    height="5"
+                    className={i < game.bossHp ? "fill-action" : "fill-muted"}
+                  />
+                ))}
+              </g>
             )}
             <g
               data-platform-player
@@ -336,30 +382,51 @@ export function PlatformGame() {
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/90 px-3 text-center">
             <p className="font-heading text-2xl tracking-tight sm:text-3xl">
               {game.status === "ready"
-                ? "Super Kusuma"
+                ? "Mini Jump"
                 : game.status === "paused"
                   ? "Take a breather."
                   : game.status === "won"
                     ? "You made it!"
-                    : "One more run?"}
+                    : game.status === "cleared"
+                      ? "World cleared!"
+                      : "One more run?"}
             </p>
             <p className="max-w-60 text-xs leading-relaxed text-muted-foreground">
               {game.status === "ready"
-                ? "Grab coins. Hop over gaps. Reach the flag."
+                ? progress.level === 3
+                  ? "The gatekeeper waits. Stomp the boss three times to unlock the flag."
+                  : "Grab coins. Hop over gaps. Reach the flag to unlock the next world."
                 : game.status === "paused"
                   ? "Your adventure will wait."
-                  : `${game.collected.length} coins collected. Fancy another adventure?`}
+                  : game.status === "cleared"
+                    ? `World ${game.level} complete. The next world brings faster enemies.`
+                    : `${game.collected.length} coins collected. Fancy another adventure?`}
             </p>
             <Button
-              onClick={game.status === "paused" ? resume : start}
+              onClick={() => {
+                if (game.status === "paused") resume()
+                else if (game.status === "cleared") {
+                  direction.current = 0
+                  dispatch({ type: "next" })
+                  board.current?.focus({ preventScroll: true })
+                } else if (game.status === "ready")
+                  start(progress.level, progress.checkpoint || 42)
+                else if (game.status === "over")
+                  start(game.level, game.checkpoint)
+                else start()
+              }}
               className="px-4"
             >
               <Play size={16} aria-hidden="true" />
               {game.status === "ready"
-                ? "Start adventure"
+                ? progress.level > 1 || progress.checkpoint > 42
+                  ? `Continue world ${progress.level}`
+                  : "Start adventure"
                 : game.status === "paused"
                   ? "Resume adventure"
-                  : "Play again"}
+                  : game.status === "cleared"
+                    ? "Next world"
+                    : "Play again"}
             </Button>
           </div>
         )}
@@ -432,7 +499,7 @@ export function PlatformGame() {
           <button
             type="button"
             aria-label="Restart adventure"
-            onClick={start}
+            onClick={() => start()}
             className="grid size-11 place-items-center border border-border hover:bg-muted"
           >
             <RotateCcw size={16} aria-hidden="true" />
@@ -444,7 +511,11 @@ export function PlatformGame() {
         className="mt-3 text-xs leading-relaxed text-muted-foreground"
       >
         ← → or A / D to move. Space / ↑ to jump. P to pause. On mobile, hold an
-        arrow and tap jump.
+        arrow and tap jump.{" "}
+        {game.level === 3
+          ? "Stomp the gatekeeper three times to unlock the flag."
+          : "Reach the flag to unlock the next world."}{" "}
+        Checkpoints save on this device.
       </p>
       <p role="status" className="sr-only">
         {game.status === "won"

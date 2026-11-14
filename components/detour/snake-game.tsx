@@ -11,12 +11,15 @@ import {
 } from "lucide-react"
 import { type KeyboardEvent, useEffect, useId, useReducer, useRef } from "react"
 import { Button } from "@/components/ui/button"
+import { preventGameContextMenu } from "@/lib/game-input"
 import {
-  BOARD_SIZE,
+  BOARD_HEIGHT,
+  BOARD_WIDTH,
   createSnakeGame,
   type Direction,
   snakeReducer,
 } from "@/lib/snake"
+import { useArcadeProgress } from "@/lib/use-arcade-progress"
 
 const keys: Record<string, Direction> = {
   ArrowUp: "up",
@@ -30,10 +33,10 @@ const keys: Record<string, Direction> = {
 }
 
 const controls = [
-  { direction: "up", Icon: ArrowUp, position: "col-start-2" },
-  { direction: "left", Icon: ArrowLeft, position: "col-start-1 row-start-2" },
-  { direction: "down", Icon: ArrowDown, position: "col-start-2 row-start-2" },
-  { direction: "right", Icon: ArrowRight, position: "col-start-3 row-start-2" },
+  { direction: "left", Icon: ArrowLeft },
+  { direction: "up", Icon: ArrowUp },
+  { direction: "down", Icon: ArrowDown },
+  { direction: "right", Icon: ArrowRight },
 ] as const
 
 export function SnakeGame() {
@@ -44,15 +47,26 @@ export function SnakeGame() {
   const instructions = useId()
   const grid = useId()
   const running = game.status === "running"
+  const { progress, save } = useArcadeProgress("snake")
+  const slowed = game.slowTicks > 0
+  useEffect(() => {
+    if (game.status !== "ready")
+      save({
+        level: game.level,
+        best: game.best,
+        completed: game.status === "won",
+      })
+  }, [game.status, game.level, game.best, save])
 
   useEffect(() => {
     if (!running) return
     const timer = window.setInterval(
       () => dispatch({ type: "tick" }),
-      Math.max(90, 170 - game.score * 4),
+      Math.max(75, 170 - game.score * 2 - (game.level - 1) * 18) +
+        (slowed ? 55 : 0),
     )
     return () => window.clearInterval(timer)
-  }, [running, game.score])
+  }, [running, game.score, game.level, slowed])
 
   useEffect(() => {
     const pause = () => dispatch({ type: "pause" })
@@ -76,10 +90,13 @@ export function SnakeGame() {
   }, [])
 
   function start() {
-    dispatch({
-      type:
-        game.status === "over" || game.status === "won" ? "restart" : "start",
-    })
+    if (game.status === "paused") dispatch({ type: "start" })
+    else
+      dispatch({
+        type: "restart",
+        level: game.status === "ready" ? progress.level : game.level,
+        best: progress.best,
+      })
     board.current?.focus({ preventScroll: true })
   }
 
@@ -112,6 +129,8 @@ export function SnakeGame() {
   return (
     <div
       className="p-3 sm:p-4"
+      data-game
+      onContextMenu={preventGameContextMenu}
       data-snake-status={game.status}
       role="application"
       aria-label="Snake Xenzia"
@@ -122,13 +141,13 @@ export function SnakeGame() {
     >
       <div className="mb-3 flex items-center justify-between gap-3 font-mono text-xs">
         <span>
-          Score{" "}
+          L{game.status === "ready" ? progress.level : game.level} · Score{" "}
           <strong className="text-action">
             {String(game.score).padStart(2, "0")}
           </strong>
         </span>
         <span className="text-muted-foreground">
-          Best this visit {String(game.best).padStart(2, "0")}
+          Best {String(Math.max(game.best, progress.best)).padStart(2, "0")}
         </span>
       </div>
       <button
@@ -141,12 +160,12 @@ export function SnakeGame() {
         aria-label="Snake Xenzia game board"
         aria-describedby={instructions}
         onKeyDown={steer}
-        className="relative block aspect-square w-full overflow-hidden border border-brand-500 p-0 bg-brand-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action dark:bg-brand-900"
+        className="relative block aspect-[3/2] w-full overflow-hidden border border-brand-500 p-0 bg-brand-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action dark:bg-brand-900"
       >
         <svg
           role="img"
           aria-label={`Snake board. Score ${game.score}.`}
-          viewBox={`0 0 ${BOARD_SIZE * 10} ${BOARD_SIZE * 10}`}
+          viewBox={`0 0 ${BOARD_WIDTH * 10} ${BOARD_HEIGHT * 10}`}
           className="size-full"
         >
           <title>Snake Xenzia board</title>
@@ -169,8 +188,8 @@ export function SnakeGame() {
           {game.snake.map((cell, index) => (
             <rect
               key={cell}
-              x={(cell % BOARD_SIZE) * 10 + 1}
-              y={Math.floor(cell / BOARD_SIZE) * 10 + 1}
+              x={(cell % BOARD_WIDTH) * 10 + 1}
+              y={Math.floor(cell / BOARD_WIDTH) * 10 + 1}
               width="8"
               height="8"
               className={
@@ -183,12 +202,32 @@ export function SnakeGame() {
           ))}
           {game.food !== null && (
             <circle
-              cx={(game.food % BOARD_SIZE) * 10 + 5}
-              cy={Math.floor(game.food / BOARD_SIZE) * 10 + 5}
+              cx={(game.food % BOARD_WIDTH) * 10 + 5}
+              cy={Math.floor(game.food / BOARD_WIDTH) * 10 + 5}
               r="3"
               className="fill-action stroke-brand-900 dark:stroke-brand-100"
               strokeWidth="0.8"
             />
+          )}
+          {game.bonus !== null && (
+            <g>
+              <circle
+                cx={(game.bonus % BOARD_WIDTH) * 10 + 5}
+                cy={Math.floor(game.bonus / BOARD_WIDTH) * 10 + 5}
+                r="4"
+                className="fill-action stroke-brand-900 dark:stroke-brand-100"
+                strokeWidth="1"
+              />
+              <circle
+                cx={(game.bonus % BOARD_WIDTH) * 10 + 5}
+                cy={Math.floor(game.bonus / BOARD_WIDTH) * 10 + 5}
+                r="5"
+                fill="none"
+                className="stroke-action"
+                strokeWidth="0.7"
+                strokeDasharray={`${(game.bonusTicks / 50) * 31.4} 31.4`}
+              />
+            </g>
           )}
         </svg>
         {!running && (
@@ -199,12 +238,12 @@ export function SnakeGame() {
             >
               A LITTLE NOKIA NOSTALGIA
             </span>
-            <span className="font-heading text-3xl tracking-tight sm:text-4xl">
+            <span className="font-heading text-2xl tracking-tight sm:text-3xl">
               {title}
             </span>
             <span className="max-w-60 text-xs leading-relaxed text-muted-foreground">
               {game.status === "ready"
-                ? "Eat the amber dots. Avoid the walls and your own tail."
+                ? "Eat the dots. Golden rings give +3 points and a short slow-down."
                 : game.status === "paused"
                   ? "Your next move can wait."
                   : `You scored ${game.score}. Ready for another go?`}
@@ -212,61 +251,80 @@ export function SnakeGame() {
           </span>
         )}
       </button>
-      <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
-        <Button
-          type="button"
-          className="px-3 text-xs"
-          onClick={() => {
-            if (running) dispatch({ type: "pause" })
-            else start()
-          }}
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <fieldset
+          aria-label="Snake direction"
+          className="grid grid-cols-4 gap-1"
         >
-          {running ? <Pause size={14} /> : <Play size={14} />}{" "}
-          {running
-            ? "Pause game"
-            : game.status === "paused"
-              ? "Resume game"
-              : game.status === "over" || game.status === "won"
-                ? "Play again"
-                : "Start game"}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          className="px-3 text-xs"
-          onClick={() => {
-            dispatch({ type: "restart" })
-            board.current?.focus({ preventScroll: true })
-          }}
-        >
-          <RotateCcw size={14} />
-          Restart
-        </Button>
-      </div>
-      <fieldset
-        aria-label="Snake direction"
-        className="mx-auto mt-3 grid w-fit grid-cols-3 gap-1"
-      >
-        {controls.map(({ direction, Icon, position }) => (
-          <button
-            key={direction}
+          {controls.map(({ direction, Icon }) => (
+            <button
+              key={direction}
+              type="button"
+              aria-label={`Steer ${direction}`}
+              disabled={!running}
+              onClick={() => {
+                dispatch({ type: "turn", direction })
+                board.current?.focus({ preventScroll: true })
+              }}
+              className="grid size-11 place-items-center border border-border transition-colors hover:bg-muted active:bg-brand-300 active:text-brand-900 disabled:opacity-35"
+            >
+              <Icon size={18} aria-hidden="true" />
+            </button>
+          ))}
+        </fieldset>
+        <div className="flex gap-1">
+          <Button
             type="button"
-            aria-label={`Steer ${direction}`}
-            disabled={!running}
-            onClick={() => dispatch({ type: "turn", direction })}
-            className={`${position} grid size-11 place-items-center border border-border transition-colors hover:bg-muted active:bg-brand-300 active:text-brand-900 disabled:opacity-35`}
+            className="size-11 min-h-11 px-0"
+            aria-label={
+              running
+                ? "Pause game"
+                : game.status === "paused"
+                  ? "Resume game"
+                  : game.status === "over" || game.status === "won"
+                    ? "Play again"
+                    : progress.level > 1
+                      ? `Continue level ${progress.level}`
+                      : "Start game"
+            }
+            onClick={() => {
+              if (running) dispatch({ type: "pause" })
+              else start()
+            }}
           >
-            <Icon size={18} />
-          </button>
-        ))}
-      </fieldset>
+            {running ? (
+              <Pause size={16} aria-hidden="true" />
+            ) : (
+              <Play size={16} aria-hidden="true" />
+            )}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="size-11 min-h-11 px-0"
+            aria-label="Restart"
+            onClick={() => {
+              dispatch({ type: "restart", best: progress.best })
+              board.current?.focus({ preventScroll: true })
+            }}
+          >
+            <RotateCcw size={16} aria-hidden="true" />
+          </Button>
+        </div>
+      </div>
       <p
         id={instructions}
         className="mt-3 text-center text-xs leading-relaxed text-muted-foreground"
       >
-        Arrow keys or WASD to steer. Space to pause.
+        Arrow keys or WASD to steer. Space to pause. Golden rings expire, so be
+        quick.
         <br />
-        On your phone, use the arrows above.
+        On your phone, use the arrows above.{" "}
+        {slowed
+          ? "Slow-down active."
+          : game.level === 3
+            ? "Max speed level."
+            : `Next level at ${game.level * 5} regular dots.`}
       </p>
       <p role="status" className="sr-only">
         {game.status === "over"
