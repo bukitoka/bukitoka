@@ -15,7 +15,7 @@ export function HeroSection() {
             <p className="max-w-md text-base leading-relaxed text-muted-foreground">
               In 2021, I was building tools to move customer records and loan
               applications off paper. Since then, the work has taken me through
-              warehouses, HR teams, and wine cellars.
+              warehouses, career sites, and wine cellars.
             </p>
           </div>
           <div className="mt-6 grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 sm:flex sm:flex-wrap md:mt-8">

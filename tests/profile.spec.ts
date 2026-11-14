@@ -984,3 +984,23 @@ test("mobile arcade opens by default and suppresses selection and long-press men
     ),
   ).toBe(false)
 })
+
+test("Grune is described as a warehouse app on the website and resume", async ({
+  page,
+}) => {
+  await page.goto("/")
+  const grune = page.locator("#experience details").filter({
+    has: page.getByRole("heading", { name: "Grune Technology", exact: true }),
+  })
+  await expect(grune).toContainText("warehouse app")
+  await expect(grune).not.toContainText(/\bERP\b/i)
+  await page.goto("/resume")
+  const entry = page
+    .locator("article")
+    .filter({
+      has: page.getByRole("heading", { name: "Grune Technology", exact: true }),
+    })
+    .last()
+  await expect(entry).toContainText("warehouse app")
+  await expect(entry).not.toContainText(/\bERP\b/i)
+})

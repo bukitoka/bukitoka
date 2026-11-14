@@ -4,14 +4,14 @@ export const projects = [
     name: "WineAdore",
     category: "E-COMMERCE / FRONTEND",
     description:
-      "Buying a bottle was only part of it. Customers also needed a personal cellar, tasting events, and somewhere to find restaurants. I built those interfaces alongside the storefront and Stripe payments.",
+      "WineAdore brings together core e-commerce, store-credit rewards, a personal wine cellar, corkage, and events. I worked on the interfaces for these features as part of the customer-facing web application.",
     outcome: "Initial page loads reduced by approximately 30%.",
-    stack: ["React 19", "TypeScript", "Custom SSR", "Stripe"],
+    stack: ["React 19", "TypeScript", "Custom SSR"],
     href: "https://wineadore.com",
     kind: "wine",
     year: "2025–2026",
     notes: [
-      "Built customer accounts, the personal wine cellar, and Stripe checkout interfaces.",
+      "Worked on core e-commerce interfaces, store-credit rewards, wine cellar, corkage, and events.",
       "Custom SSR, code splitting, and asset optimization cut initial page load by approximately 30%.",
     ],
   },
@@ -38,9 +38,9 @@ export const experience = [
     role: "Frontend Web Developer",
     date: "MAY 2025 — SEP 2026",
     description:
-      "Built the storefront, personal wine cellar, Stripe wallet, and Maps integrations. Custom SSR and asset optimization cut initial load time by approximately 30%.",
+      "Developed and maintained WineAdore’s core e-commerce interfaces, store-credit rewards, wine cellar, corkage, and events. Custom SSR and asset optimization reduced initial page load by approximately 30%.",
     highlights: [
-      "Delivered the storefront, personal wine cellar, Stripe wallet, and Google Maps features through implementation and production support.",
+      "Developed and maintained customer-facing interfaces for core e-commerce, store-credit rewards, wine cellar, corkage, and events.",
       "Improved load times and SEO with custom server-side rendering, code splitting, and asset optimization, reducing initial page load by approximately 30%.",
     ],
   },
@@ -49,11 +49,11 @@ export const experience = [
     role: "Full Stack Developer",
     date: "JUN 2024 — MAY 2025",
     description:
-      "Modernized HR software, improved APIs, and automated releases with Docker and GitHub Actions, bringing deployment time from hours to minutes.",
+      "Worked on the ongoing maintenance of existing career sites and the company’s internal backoffice application. The role also included assisting with DevOps configuration in support of these applications.",
     highlights: [
-      "Modernized an existing HR platform, refactoring slow frontend and backend modules and adding automated tests.",
-      "Automated releases with Docker and GitHub Actions, bringing deployment time from hours to minutes without deployment downtime.",
-      "Built and maintained REST APIs and database queries, strengthened cloud security and monitoring, and worked with product and QA on reliable releases.",
+      "Maintained existing career sites, with a focus on the continued upkeep of applications already in use.",
+      "Assisted with DevOps configuration as part of the work supporting the company’s applications.",
+      "Maintained the internal backoffice application alongside the career sites, covering both internal and public-facing applications.",
     ],
   },
   {
@@ -61,11 +61,11 @@ export const experience = [
     role: "Full Stack Developer",
     date: "JAN 2024 — MAY 2024",
     description:
-      "Built a warehouse and inventory ERP for a Japanese liquor company, replacing spreadsheets with digital stock and delivery tracking.",
+      "Built a warehouse app for a Japanese liquor company, replacing spreadsheets with digital inventory and delivery tracking.",
     highlights: [
-      "Built a warehouse and inventory ERP for a Japanese liquor company, replacing spreadsheets with digital stock and delivery tracking.",
+      "Built a warehouse app for a Japanese liquor company, replacing spreadsheets with digital inventory and delivery tracking.",
       "Designed database schemas and reporting queries for stock levels, incoming goods, and delivery schedules.",
-      "Worked directly with warehouse staff to validate workflows, and added automated tests and documentation for daily operations.",
+      "Added automated tests and documentation for warehouse workflows and daily operations.",
     ],
   },
   {
@@ -77,7 +77,7 @@ export const experience = [
     highlights: [
       "Built CRM systems for MKM Honda and BPR Kancana, moving customer operations online and speeding up loan approvals.",
       "Connected third-party APIs and internal ERP services, and built reports for sales, customer activity, and loan progress.",
-      "Trained staff and supported the systems after launch, resolving production issues and helping teams move away from paper processes.",
+      "Supported the systems after launch and resolved production issues.",
     ],
   },
 ]

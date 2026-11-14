@@ -41,14 +41,14 @@ export function AboutSection() {
             use this tomorrow.
           </AnimatedHeading>
           <p className="mt-7 max-w-xl leading-relaxed text-muted-foreground">
-            At MKM Honda, that meant helping staff move away from paper
-            processes. At Grune, it meant working with warehouse staff to turn
-            stock and delivery tracking into software they could use.
+            At MKM Honda, that meant moving customer records and loan workflows
+            off paper. At Grune, it meant turning stock and delivery tracking
+            into a warehouse app.
           </p>
           <p className="mt-5 max-w-xl leading-relaxed text-muted-foreground">
             The release wasn’t the end of the job. There were reports to get
-            right, staff to train, and production issues to fix. That’s the part
-            of building software I keep coming back to.
+            right and production issues to fix. That’s the part of building
+            software I keep coming back to.
           </p>
           <div className="mt-6 flex gap-3">
             <a

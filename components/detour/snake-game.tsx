@@ -44,6 +44,7 @@ export function SnakeGame() {
     createSnakeGame(),
   )
   const board = useRef<HTMLButtonElement>(null)
+  const gameRoot = useRef<HTMLDivElement>(null)
   const instructions = useId()
   const grid = useId()
   const running = game.status === "running"
@@ -73,6 +74,10 @@ export function SnakeGame() {
     const onVisibility = () => {
       if (document.hidden) pause()
     }
+    const onOutsidePointer = (event: PointerEvent) => {
+      if (gameRoot.current && !gameRoot.current.contains(event.target as Node))
+        pause()
+    }
     const observer = new IntersectionObserver(
       (entries) => {
         if (!entries[0]?.isIntersecting) pause()
@@ -80,10 +85,12 @@ export function SnakeGame() {
       { threshold: 0.15 },
     )
     if (board.current) observer.observe(board.current)
+    document.addEventListener("pointerdown", onOutsidePointer, true)
     document.addEventListener("visibilitychange", onVisibility)
     window.addEventListener("blur", pause)
     return () => {
       observer.disconnect()
+      document.removeEventListener("pointerdown", onOutsidePointer, true)
       document.removeEventListener("visibilitychange", onVisibility)
       window.removeEventListener("blur", pause)
     }
@@ -128,6 +135,7 @@ export function SnakeGame() {
 
   return (
     <div
+      ref={gameRoot}
       className="p-3 sm:p-4"
       data-game
       onContextMenu={preventGameContextMenu}
@@ -135,7 +143,10 @@ export function SnakeGame() {
       role="application"
       aria-label="Snake Xenzia"
       onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget))
+        if (
+          event.relatedTarget &&
+          !event.currentTarget.contains(event.relatedTarget)
+        )
           dispatch({ type: "pause" })
       }}
     >
